@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ENCRYPTOR</title>
+<style>
+*{box-sizing:border-box}body{margin:0;padding:20px;background:#000;color:#ddd;font-family:Arial,sans-serif}.brand{font-size:11px;color:#777;letter-spacing:1px;margin-bottom:12px}h1{font-size:24px;margin:0 0 5px}.sub{color:#666;font-size:12px;margin-bottom:25px}.main{display:grid;grid-template-columns:1fr 1fr;gap:15px}.panel{min-width:0}.panel h2{font-size:15px;font-weight:normal;color:#999;margin-bottom:8px}textarea{width:100%;height:300px;resize:vertical;background:#080808;border:1px solid #444;color:#eee;padding:12px;font-size:17px;font-family:monospace;outline:none;border-radius:0}textarea:focus{border-color:#aaa}button{width:100%;margin-top:8px;padding:13px;background:#222;color:#eee;border:1px solid #555;font-size:14px;cursor:pointer}button:active{background:#444}.status{margin-top:18px;color:#777;font-size:12px}.settings{margin-bottom:22px}.settings-label{font-size:13px;color:#aaa;margin-bottom:10px}.settings-note{font-size:12px;color:#777;margin-left:8px}.keys{display:flex;gap:8px;max-width:400px}.keys button{margin-top:0;width:25%;font-weight:bold}.keys button.selected{background:#ddd;color:#000;border-color:#fff}.suffix{margin-top:16px;max-width:500px}.suffix label{font-size:12px;color:#888;display:block;margin-bottom:7px}.suffix input{width:100%;background:#080808;border:1px solid #444;color:#eee;padding:10px;font:14px monospace;border-radius:0}.hint{font-size:12px;color:#777;margin-top:8px}@media(max-width:600px){body{padding:14px}.main{grid-template-columns:1fr;gap:24px}textarea{height:180px;font-size:16px}}
+</style>
+</head>
+<body>
+<div class="brand">Die Enigma by sy</div>
+<h1>ENCRYPTOR</h1>
+<div class="sub">ENGLISH TEXT ENCODING SYSTEM</div>
+<div class="settings">
+<div class="settings-label">최대 2개 중복 설정 가능</div>
+<div class="keys" id="keys">
+<button type="button" data-key="A" aria-pressed="true" class="selected">A</button>
+<button type="button" data-key="B" aria-pressed="false">B</button>
+<button type="button" data-key="C" aria-pressed="false">C</button>
+<button type="button" data-key="D" aria-pressed="false">D</button>
+</div>
+
+</div>
+<div class="main">
+<div class="panel"><h2>01 / ORIGINAL TEXT</h2><textarea id="original" placeholder="Enter English..." inputmode="text" autocapitalize="off" autocomplete="off" spellcheck="false"></textarea><button type="button" id="encrypt">ENCRYPT →</button></div>
+<div class="panel"><h2>02 / ENCRYPTED TEXT</h2><textarea id="encrypted" placeholder="Enter encrypted text..." inputmode="text" autocapitalize="off" autocomplete="off" spellcheck="false"></textarea><button type="button" id="decrypt">← DECRYPT</button></div>
+</div>
+
+<script>
+const original=document.getElementById('original');
+const encrypted=document.getElementById('encrypted');
+const fixedSuffix=' Heil Hitler!';
+const selected=new Set(['A']);
+const shifts={A:1,B:2,C:3,D:5};
+const buttons=[...document.querySelectorAll('[data-key]')];
+function clean(t){return t.replace(/[^a-zA-Z ]/g,'');}
+function filterInput(box){box.addEventListener('input',()=>{const p=box.selectionStart;const before=clean(box.value.slice(0,p));const value=clean(box.value);if(box.value!==value){box.value=value;box.setSelectionRange(before.length,before.length);}});}
+filterInput(encrypted);
+function userText(){const v=original.value;return v.endsWith(fixedSuffix)?v.slice(0,-fixedSuffix.length):v;}
+function ensureSuffix(){const current=userText().replace(/[^a-zA-Z ]/g,'');original.value=current+fixedSuffix;return current;}
+original.addEventListener('input',()=>{const pos=original.selectionStart;const text=original.value;const marker=text.indexOf(fixedSuffix);const editable=marker>=0?text.slice(0,marker):text.replace(/ Heil Hitler!?$/,'');const cleaned=clean(editable);original.value=cleaned+fixedSuffix;const caret=Math.min(pos,cleaned.length);original.setSelectionRange(caret,caret);});
+original.addEventListener('click',()=>{const max=original.value.length-fixedSuffix.length;if(original.selectionStart>max)original.setSelectionRange(max,max);});
+original.value=fixedSuffix;
+function shift(){return [...selected].reduce((n,k)=>n*(k==='A' && selected.size===2?6:shifts[k]),1);}
+function update(){buttons.forEach(b=>{const on=selected.has(b.dataset.key);b.classList.toggle('selected',on);b.setAttribute('aria-pressed',String(on));});}
+buttons.forEach(b=>b.addEventListener('click',()=>{const k=b.dataset.key;if(selected.has(k)){if(selected.size>1)selected.delete(k);}else if(selected.size<2){selected.add(k);}else{alert('최대 2개까지 선택할 수 있습니다.');return;}update();}));
+function transform(text,n){return clean(text).replace(/[a-zA-Z]/g,ch=>{const base=ch>='a'&&ch<='z'?97:65;return String.fromCharCode((ch.charCodeAt(0)-base+((n%26)+26)%26)%26+base);});}
+document.getElementById('encrypt').addEventListener('click',()=>{const full=ensureSuffix();encrypted.value=transform(full,shift())+transform(' Heil Hitler',shift())+'!';});
+document.getElementById('decrypt').addEventListener('click',()=>{const decoded=transform(encrypted.value,-shift());const body=decoded.endsWith(' Heil Hitler')?decoded.slice(0,-' Heil Hitler'.length):decoded;original.value=clean(body)+fixedSuffix;});
+</script>
+</body>
+</html>
